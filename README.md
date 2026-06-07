@@ -1,53 +1,59 @@
 # Rede de Sensores IoT
 
-Projeto simples de Middleware Orientado a Mensagens para a disciplina de
-Programacao Paralela e Distribuida.
+Simulação de uma rede de sensores IoT baseada no modelo de comunicação
+publish/subscribe. O sistema permite cadastrar sensores e clientes, assinar
+tópicos e distribuir alertas por meio de um broker.
 
-## Executar
+## Requisitos
 
-O programa usa apenas bibliotecas do Python.
+- Python 3
+- Tkinter
+
+O projeto não utiliza dependências externas. Em algumas distribuições Linux,
+o Tkinter precisa ser instalado separadamente.
+
+## Execução
 
 ```bash
 python codigo.py
 ```
 
-## Como testar
+## Como usar
 
-1. Cadastre um sensor informando ID, tipo e limites.
+1. Cadastre um sensor informando ID, tipo, limite mínimo e limite máximo.
 2. Cadastre um cliente.
-3. Selecione o cliente e um topico e clique em **Assinar topico**.
+3. Selecione o cliente e um tópico e clique em **Assinar tópico**.
 4. Selecione o sensor e informe uma nova leitura.
-5. Se o valor atingir o limite minimo ou maximo, o cliente recebe a mensagem.
+5. Se o valor atingir ou ultrapassar um dos limites, os clientes inscritos no
+   tópico recebem um alerta.
 
 ## Funcionamento
 
-O codigo possui tres partes principais:
+O código possui três partes principais:
 
-- **Sensor:** guarda ID, tipo, limites, valor atual e topico.
-- **Broker:** e o dicionario `broker`, que relaciona cada topico aos clientes
-  inscritos.
-- **Cliente:** escolhe os topicos e recebe as mensagens publicadas.
+- **Sensor:** armazena ID, tipo, limites, valor atual e tópico.
+- **Broker:** relaciona cada tópico aos clientes inscritos.
+- **Cliente:** assina tópicos e recebe as mensagens publicadas.
 
-O fluxo e:
+O fluxo de comunicação é:
 
 ```text
-Sensor publica -> Broker verifica os inscritos -> Cliente recebe
+Sensor publica -> Broker identifica os inscritos -> Clientes recebem
 ```
 
-Sensores do mesmo tipo podem ser cadastrados com IDs diferentes. Cada sensor
-possui seu proprio topico, por exemplo:
+Cada sensor possui seu próprio tópico, formado pelo tipo e pelo ID:
 
 ```text
 temperatura/sensor1
 temperatura/sensor2
 ```
 
-## Explicacao para a apresentacao
+As mensagens são publicadas somente quando a leitura é menor ou igual ao
+limite mínimo, ou maior ou igual ao limite máximo. Cada alerta informa:
 
-Quando a leitura e alterada, o programa compara o valor com os limites. Se um
-limite for atingido, a funcao `publicar` envia a mensagem para o Broker. O
-Broker percorre apenas os clientes inscritos naquele topico e adiciona a
-mensagem na lista de cada um.
-
-Isso representa o modelo **publish/subscribe**: o sensor publica, o cliente
-assina e o Broker faz a intermediacao.
+- data e hora;
+- limite atingido;
+- ID e tipo do sensor;
+- valor da leitura;
+- valor do limite;
+- tópico da publicação.
