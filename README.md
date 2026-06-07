@@ -2,7 +2,7 @@
 
 Simulação de uma rede de sensores IoT baseada no modelo de comunicação
 publish/subscribe. O sistema permite cadastrar sensores e clientes, assinar
-tópicos e distribuir alertas por meio de um broker.
+tópicos e distribuir leituras e alertas por meio de um broker.
 
 ## Requisitos
 
@@ -24,8 +24,9 @@ python codigo.py
 2. Cadastre um cliente.
 3. Selecione o cliente e um tópico e clique em **Assinar tópico**.
 4. Selecione o sensor e informe uma nova leitura.
-5. Se o valor atingir ou ultrapassar um dos limites, os clientes inscritos no
-   tópico recebem um alerta.
+5. A nova leitura é enviada aos clientes inscritos no tópico.
+6. Se o valor atingir ou ultrapassar um dos limites, a mensagem é identificada
+   como um alerta.
 
 ## Funcionamento
 
@@ -48,12 +49,30 @@ temperatura/sensor1
 temperatura/sensor2
 ```
 
-As mensagens são publicadas somente quando a leitura é menor ou igual ao
-limite mínimo, ou maior ou igual ao limite máximo. Cada alerta informa:
+O ID precisa ser único apenas entre sensores do mesmo tipo. Por exemplo, um
+sensor de umidade e um sensor de velocidade podem utilizar o ID `1`, pois seus
+tópicos serão diferentes:
+
+```text
+umidade/1
+velocidade/1
+```
+
+Todas as novas leituras são publicadas. Quando a leitura é menor ou igual ao
+limite mínimo, ou maior ou igual ao limite máximo, a mensagem também informa
+qual limite foi atingido.
+
+As unidades utilizadas são:
+
+- temperatura em graus Celsius (`°C`);
+- umidade em porcentagem (`%`);
+- velocidade em quilômetros por hora (`km/h`).
+
+Cada mensagem informa:
 
 - data e hora;
-- limite atingido;
 - ID e tipo do sensor;
-- valor da leitura;
-- valor do limite;
+- valor da leitura e sua unidade;
 - tópico da publicação.
+
+Os alertas também apresentam o limite atingido e seu respectivo valor.

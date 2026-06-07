@@ -10,6 +10,16 @@ clientes = []
 # O Broker guarda os topicos e os clientes inscritos em cada um
 broker = {}
 
+UNIDADES = {
+    "Temperatura": "°C",
+    "Umidade": "%",
+    "Velocidade": "km/h",
+}
+
+
+def formatar_valor(valor, unidade):
+    return f"{valor:g} {unidade}"
+
 
 def adicionar_sensor():
     nome = entrada_sensor.get().strip()
@@ -26,19 +36,23 @@ def adicionar_sensor():
         messagebox.showerror("Erro", "Informe o ID do sensor.")
         return
 
-    if any(sensor["nome"] == nome for sensor in sensores):
-        messagebox.showerror("Erro", "Ja existe um sensor com esse ID.")
+    topico = f"{tipo.lower()}/{nome}"
+
+    if any(sensor["topico"] == topico for sensor in sensores):
+        messagebox.showerror(
+            "Erro",
+            "Ja existe um sensor desse tipo com esse ID.",
+        )
         return
 
     if minimo >= maximo:
         messagebox.showerror("Erro", "O limite minimo deve ser menor que o maximo.")
         return
 
-    topico = f"{tipo.lower()}/{nome}"
-
     sensor = {
         "nome": nome,
         "tipo": tipo,
+        "unidade": UNIDADES[tipo],
         "minimo": minimo,
         "maximo": maximo,
         "valor": 0,
@@ -51,8 +65,15 @@ def adicionar_sensor():
     tabela_sensores.insert(
         "",
         "end",
-        iid=nome,
-        values=(nome, tipo, minimo, maximo, 0, topico),
+        iid=topico,
+        values=(
+            nome,
+            tipo,
+            formatar_valor(minimo, sensor["unidade"]),
+            formatar_valor(maximo, sensor["unidade"]),
+            formatar_valor(0, sensor["unidade"]),
+            topico,
+        ),
     )
 
     atualizar_topicos()
@@ -72,49 +93,59 @@ def alterar_leitura():
         messagebox.showerror("Erro", "Informe um valor numerico.")
         return
 
-    nome = selecionado[0]
-    sensor = next(sensor for sensor in sensores if sensor["nome"] == nome)
+    topico = selecionado[0]
+    sensor = next(sensor for sensor in sensores if sensor["topico"] == topico)
     sensor["valor"] = novo_valor
 
     tabela_sensores.item(
-        nome,
+        topico,
         values=(
             sensor["nome"],
             sensor["tipo"],
-            sensor["minimo"],
-            sensor["maximo"],
-            sensor["valor"],
+            formatar_valor(sensor["minimo"], sensor["unidade"]),
+            formatar_valor(sensor["maximo"], sensor["unidade"]),
+            formatar_valor(sensor["valor"], sensor["unidade"]),
             sensor["topico"],
         ),
     )
 
-    # O sensor publica apenas quando atinge um dos limites
+    publicar(sensor)
+
     if novo_valor <= sensor["minimo"] or novo_valor >= sensor["maximo"]:
-        publicar(sensor)
         status.config(text="Alerta enviado ao Broker!", fg="red")
     else:
-        status.config(text="Valor normal. Nenhuma mensagem enviada.", fg="green")
+        status.config(text="Leitura enviada ao Broker.", fg="green")
 
 
 def publicar(sensor):
     if sensor["valor"] <= sensor["minimo"]:
-        tipo_alerta = "LIMITE MINIMO ATINGIDO"
+        ocorrencia = "ALERTA: LIMITE MINIMO ATINGIDO"
         limite = sensor["minimo"]
         comparacao = "abaixo ou igual ao minimo"
-    else:
-        tipo_alerta = "LIMITE MAXIMO ATINGIDO"
+    elif sensor["valor"] >= sensor["maximo"]:
+        ocorrencia = "ALERTA: LIMITE MAXIMO ATINGIDO"
         limite = sensor["maximo"]
         comparacao = "acima ou igual ao maximo"
+    else:
+        ocorrencia = "NOVA LEITURA"
+        limite = None
+        comparacao = "dentro dos limites"
 
     mensagem = (
         f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] "
-        f"ALERTA: {tipo_alerta} | "
+        f"{ocorrencia} | "
         f"Sensor: {sensor['nome']} | "
         f"Tipo: {sensor['tipo']} | "
-        f"Leitura: {sensor['valor']} ({comparacao}) | "
-        f"Limite: {limite} | "
-        f"Topico: {sensor['topico']}"
+        f"Leitura: {formatar_valor(sensor['valor'], sensor['unidade'])} "
+        f"({comparacao})"
     )
+
+    if limite is not None:
+        mensagem += (
+            f" | Limite: {formatar_valor(limite, sensor['unidade'])}"
+        )
+
+    mensagem += f" | Topico: {sensor['topico']}"
 
     # O Broker entrega a mensagem somente aos clientes inscritos
     for cliente in broker[sensor["topico"]]:
